@@ -51,10 +51,11 @@ class FLBHeader:
 
     # Parse a full FLB header.  Returns the number of bytes consumed
     def parse(self, firmware):
-        (self.magic, self.header_length, self.unknown1, self.data_length, self.delimiter,
-            self.description, self.version1, self.version2, self.version3) = struct.unpack(FLBHeader.HEADERFORMAT, firmware[0:FLBHeader.HEADERSIZE])
+        (magic_bytes, self.header_length, self.unknown1, self.data_length, self.delimiter,
+            description_bytes, self.version1, self.version2, self.version3) = struct.unpack(FLBHeader.HEADERFORMAT, firmware[0:FLBHeader.HEADERSIZE])
 
-        self.description = self.description.replace("\x00", '')
+        self.magic = magic_bytes.decode('utf-8')
+        self.description = description_bytes.replace(b"\x00", b'').decode('utf-8')
         self.logInfo()
         return FLBHeader.HEADERSIZE
 
@@ -105,7 +106,8 @@ class PCIDetails:
     }
 
     def parse(self, firmware):
-        (self.flb_type, self.unknown) = struct.unpack(PCIDetails.HEADERFORMAT, firmware[0:PCIDetails.HEADERSIZE])
+        (self.flb_type, unknown_bytes) = struct.unpack(PCIDetails.HEADERFORMAT, firmware[0:PCIDetails.HEADERSIZE])
+        self.unknown = unknown_bytes.decode('utf-8')
         self.logInfo();
 
         return PCIDetails.HEADERSIZE
@@ -365,5 +367,10 @@ newparser.set_defaults(func=write_firmware)
 args = parser.parse_args()
 if args.debug:
     import hexdump
-args.func(args)
 
+try:
+    func = args.func
+except AttributeError:
+    parser.error('too few arguments')
+
+func(args)
